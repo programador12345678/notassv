@@ -15,7 +15,6 @@
         input, select { background: var(--bg) !important; border: 1px solid var(--border) !important; color: var(--text) !important; border-radius: 12px; padding: 10px; width: 100%; outline: none; font-size: 0.875rem; }
         .btn-primary { background: var(--accent); color: white; transition: 0.3s; font-weight: 700; border-radius: 12px; }
         .btn-primary:hover { transform: translateY(-2px); opacity: 0.9; }
-        #mgmt-panel { background-color: var(--bg); color: var(--text); }
         .content-wrap { flex: 1; }
     </style>
 </head>
@@ -66,7 +65,8 @@
         <div id="sys-sec" class="hidden p-6 md:p-12">
             <div id="dual-header" class="max-w-6xl mx-auto mb-10 hidden">
                 <div class="glass p-4 rounded-full flex flex-wrap justify-between items-center px-8 shadow-lg">
-                    <div class="flex gap-2" id="student-buttons"></div>
+                    <div class="flex gap-2" id="student-buttons">
+                        </div>
                     <button id="mgmt-btn" onclick="openMgmt()" class="bg-indigo-600 text-white px-10 py-3 rounded-full font-black hidden lang" data-es="GESTIÓN" data-en="MANAGEMENT">GESTIÓN</button>
                 </div>
             </div>
@@ -83,7 +83,10 @@
                                 <h3 class="font-bold mb-4 lang" data-es="Registrar Nuevo" data-en="Register New">Registrar Nuevo</h3>
                                 <input type="text" id="new-u-id" placeholder="ID Usuario" class="mb-2">
                                 <input type="text" id="new-u-pass" placeholder="Password" class="mb-2">
-                                <select id="new-u-role" class="mb-2"><option value="editor">Editor</option><option value="lector">Lector</option></select>
+                                <select id="new-u-role" class="mb-2">
+                                    <option value="editor">Editor</option>
+                                    <option value="lector">Lector</option>
+                                </select>
                                 <button onclick="addUser()" class="w-full btn-primary py-3 lang" data-es="Agregar" data-en="Add">Agregar</button>
                             </div>
                         </div>
@@ -119,10 +122,9 @@
         let userAct = null;
         let currentTarget = "";
 
-        // FUNCIÓN CENTRAL PARA LLAMAR A LA API
+        // API CALL CORREGIDA (Código 2)
         async function apiCall(params, body = null) {
-            // AJUSTE: Asegúrate que tu archivo en la carpeta /api/ se llame api.js
-            const url = `/api/api?${new URLSearchParams(params)}`;
+            const url = `/api?${new URLSearchParams(params)}`;
             const options = {
                 method: body ? 'POST' : 'GET',
                 headers: { 'Content-Type': 'application/json' }
@@ -139,7 +141,6 @@
             }
         }
 
-        // LOGIN CORREGIDO
         async function login() {
             const user = document.getElementById('user-in').value.trim().toLowerCase();
             const pass = document.getElementById('pass-in').value.trim();
@@ -151,7 +152,6 @@
             }
 
             err.innerText = "Verificando...";
-
             const data = await apiCall({ action: 'login' }, { user, pass });
             
             if (data && data.id) {
@@ -175,8 +175,8 @@
                 renderStudentButtons();
             }
             
-            // Si es admin o tiene acceso total, muestra por defecto a Fatima
-            const defaultUser = (userAct.access === 'both') ? 'fatima.flores' : userAct.access;
+            // Determinar a quién visualizar inicialmente
+            const defaultUser = (userAct.access === 'both' || userAct.rol === 'admin') ? 'fatima.flores' : userAct.access;
             viewGroup(defaultUser);
         }
 
@@ -199,21 +199,25 @@
             }
 
             body.innerHTML = notas.map(n => {
-                const f = ((parseFloat(n.coti||0)+parseFloat(n.inte||0)+parseFloat(n.exam||0))/3).toFixed(1);
+                const coti = parseFloat(n.coti || 0);
+                const inte = parseFloat(n.inte || 0);
+                const exam = parseFloat(n.exam || 0);
+                const final = ((coti + inte + exam) / 3).toFixed(1);
+                
                 const canEdit = (userAct.rol === 'admin' || userAct.rol === 'editor');
+                
                 return `
                 <tr>
                     <td class="p-6 font-bold text-indigo-600">${n.materia}</td>
-                    <td class="p-6" contenteditable="${canEdit}" onblur="updateValue('${n.materia}','coti',this.innerText)">${n.coti}</td>
-                    <td class="p-6" contenteditable="${canEdit}" onblur="updateValue('${n.materia}','inte',this.innerText)">${n.inte}</td>
-                    <td class="p-6" contenteditable="${canEdit}" onblur="updateValue('${n.materia}','exam',this.innerText)">${n.exam}</td>
-                    <td class="p-6 text-right font-black text-2xl text-indigo-600">${f}</td>
+                    <td class="p-6" contenteditable="${canEdit}" onblur="updateValue('${n.materia}','coti',this.innerText)">${n.coti || 0}</td>
+                    <td class="p-6" contenteditable="${canEdit}" onblur="updateValue('${n.materia}','inte',this.innerText)">${n.inte || 0}</td>
+                    <td class="p-6" contenteditable="${canEdit}" onblur="updateValue('${n.materia}','exam',this.innerText)">${n.exam || 0}</td>
+                    <td class="p-6 text-right font-black text-2xl text-indigo-600">${final}</td>
                 </tr>`;
             }).join('');
         }
 
         async function updateValue(materia, columna, valor) {
-            // Limpia el valor para que sea solo números
             const numVal = valor.replace(/[^0-9.]/g, '') || "0";
             await apiCall({ action: 'update_nota' }, { 
                 estudiante: currentTarget, 
@@ -221,7 +225,7 @@
                 columna, 
                 valor: numVal 
             });
-            viewGroup(currentTarget);
+            viewGroup(currentTarget); // Refrescar para calcular el final
         }
 
         // --- UTILIDADES ---
@@ -258,9 +262,9 @@
         window.onload = () => {
             setTheme(localStorage.getItem('theme') || 'light');
             setLang(localStorage.getItem('lang') || 'es');
-            const s = localStorage.getItem('session');
-            if (s) { 
-                userAct = JSON.parse(s); 
+            const session = localStorage.getItem('session');
+            if (session) { 
+                userAct = JSON.parse(session); 
                 initSys(); 
             }
         };
