@@ -1,9 +1,8 @@
 {
-
-  "dependencies": {
-
-    "pg": "^8.11.0"
-
-  }
-
+  "rewrites": [
+    {
+      "source": "/api/:path*",
+      "destination": "/api/:path*"
+    }
+  ]
 }
