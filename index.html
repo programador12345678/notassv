@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sistema de Notas / Note System | 2026</title>
+    <title>Sistema de Notas | 2026</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;800&display=swap" rel="stylesheet">
     <style>
@@ -16,7 +16,6 @@
         .btn-primary { background: var(--accent); color: white; transition: 0.3s; font-weight: 700; border-radius: 12px; }
         .btn-primary:hover { transform: translateY(-2px); opacity: 0.9; }
         #mgmt-panel { background-color: var(--bg); color: var(--text); }
-        .user-card { border-left: 4px solid var(--accent); }
         .content-wrap { flex: 1; }
     </style>
 </head>
@@ -59,7 +58,7 @@
                 <h1 class="text-3xl font-black text-indigo-600 mb-8 italic">Sistema de Notas</h1>
                 <input type="text" id="user-in" placeholder="Usuario" class="mb-3 text-center">
                 <input type="password" id="pass-in" placeholder="Contraseña" class="mb-6 text-center">
-                <button onclick="login()" class="w-full btn-primary py-4 text-lg lang" data-es="Entrar" data-en="Sign In">Entrar</button>
+                <button onclick="login()" id="login-btn" class="w-full btn-primary py-4 text-lg lang" data-es="Entrar" data-en="Sign In">Entrar</button>
                 <p id="err" class="text-red-500 mt-4 text-xs font-bold"></p>
             </div>
         </div>
@@ -67,8 +66,7 @@
         <div id="sys-sec" class="hidden p-6 md:p-12">
             <div id="dual-header" class="max-w-6xl mx-auto mb-10 hidden">
                 <div class="glass p-4 rounded-full flex flex-wrap justify-between items-center px-8 shadow-lg">
-                    <div class="flex gap-2" id="student-buttons">
-                        </div>
+                    <div class="flex gap-2" id="student-buttons"></div>
                     <button id="mgmt-btn" onclick="openMgmt()" class="bg-indigo-600 text-white px-10 py-3 rounded-full font-black hidden lang" data-es="GESTIÓN" data-en="MANAGEMENT">GESTIÓN</button>
                 </div>
             </div>
@@ -88,7 +86,6 @@
                                 <select id="new-u-role" class="mb-2"><option value="editor">Editor</option><option value="lector">Lector</option></select>
                                 <button onclick="addUser()" class="w-full btn-primary py-3 lang" data-es="Agregar" data-en="Add">Agregar</button>
                             </div>
-                            <div id="user-admin-list" class="space-y-3"></div>
                         </div>
                         <div class="lg:col-span-8 grid grid-cols-1 md:grid-cols-2 gap-6" id="mgmt-mats-container"></div>
                     </div>
@@ -102,7 +99,7 @@
                             <tr>
                                 <th class="p-6 lang" data-es="Materia" data-en="Subject">Materia</th>
                                 <th class="p-6">Cotidiana</th>
-                                <th class="p-6">Intengradora</th>
+                                <th class="p-6">Integradora</th>
                                 <th class="p-6">Examen</th>
                                 <th class="p-6 text-right lang" data-es="Final" data-en="Final">Final</th>
                             </tr>
@@ -121,30 +118,48 @@
     <script>
         let userAct = null;
         let currentTarget = "";
-        let USERS_DATA = {}; // Se cargará de la DB
 
+        // FUNCIÓN CENTRAL PARA LLAMAR A LA API
         async function apiCall(params, body = null) {
+            // AJUSTE: Asegúrate que tu archivo en la carpeta /api/ se llame api.js
             const url = `/api/api?${new URLSearchParams(params)}`;
             const options = {
                 method: body ? 'POST' : 'GET',
                 headers: { 'Content-Type': 'application/json' }
             };
             if (body) options.body = JSON.stringify(body);
-            const res = await fetch(url, options);
-            return res.json();
+            
+            try {
+                const res = await fetch(url, options);
+                if (!res.ok) throw new Error('Error en red');
+                return await res.json();
+            } catch (e) {
+                console.error("Error API:", e);
+                return { error: "No se pudo conectar" };
+            }
         }
 
+        // LOGIN CORREGIDO
         async function login() {
-            const user = document.getElementById('user-in').value.toLowerCase();
-            const pass = document.getElementById('pass-in').value;
+            const user = document.getElementById('user-in').value.trim().toLowerCase();
+            const pass = document.getElementById('pass-in').value.trim();
+            const err = document.getElementById('err');
+            
+            if(!user || !pass) {
+                err.innerText = "Ingresa usuario y contraseña";
+                return;
+            }
+
+            err.innerText = "Verificando...";
+
             const data = await apiCall({ action: 'login' }, { user, pass });
             
-            if (data.id) {
+            if (data && data.id) {
                 userAct = data;
                 localStorage.setItem('session', JSON.stringify(data));
                 initSys();
             } else {
-                document.getElementById('err').innerText = "Error de credenciales";
+                err.innerText = "Usuario o contraseña incorrectos";
             }
         }
 
@@ -159,7 +174,10 @@
                 document.getElementById('mgmt-btn').classList.remove('hidden');
                 renderStudentButtons();
             }
-            viewGroup(userAct.access === 'both' ? 'fatima.flores' : userAct.access);
+            
+            // Si es admin o tiene acceso total, muestra por defecto a Fatima
+            const defaultUser = (userAct.access === 'both') ? 'fatima.flores' : userAct.access;
+            viewGroup(defaultUser);
         }
 
         function renderStudentButtons() {
@@ -175,9 +193,14 @@
             const notas = await apiCall({ action: 'get_notas', estudiante: uKey });
             const body = document.getElementById('table-body');
             
+            if (!Array.isArray(notas)) {
+                body.innerHTML = '<tr><td colspan="5" class="p-6 text-center">No hay datos disponibles</td></tr>';
+                return;
+            }
+
             body.innerHTML = notas.map(n => {
                 const f = ((parseFloat(n.coti||0)+parseFloat(n.inte||0)+parseFloat(n.exam||0))/3).toFixed(1);
-                const canEdit = userAct.rol !== 'lector';
+                const canEdit = (userAct.rol === 'admin' || userAct.rol === 'editor');
                 return `
                 <tr>
                     <td class="p-6 font-bold text-indigo-600">${n.materia}</td>
@@ -190,17 +213,41 @@
         }
 
         async function updateValue(materia, columna, valor) {
+            // Limpia el valor para que sea solo números
+            const numVal = valor.replace(/[^0-9.]/g, '') || "0";
             await apiCall({ action: 'update_nota' }, { 
-                estudiante: currentTarget, materia, columna, valor: valor.replace(/[^0-9.]/g, '') 
+                estudiante: currentTarget, 
+                materia, 
+                columna, 
+                valor: numVal 
             });
             viewGroup(currentTarget);
         }
 
-        // --- FUNCIONES DE GESTIÓN (MGMT) ---
+        // --- UTILIDADES ---
+        function toggleModal(id) { document.getElementById(id).classList.toggle('hidden'); }
+        
+        function logout() { 
+            localStorage.removeItem('session'); 
+            location.reload(); 
+        }
+
+        function setTheme(t) { 
+            t === 'dark' ? document.body.classList.add('dark-mode') : document.body.classList.remove('dark-mode'); 
+            localStorage.setItem('theme', t); 
+        }
+
+        function setLang(l) { 
+            document.querySelectorAll('.lang').forEach(el => {
+                const text = el.getAttribute(`data-${l}`);
+                if(text) el.innerText = text;
+            });
+            localStorage.setItem('lang', l); 
+        }
+
         function openMgmt() {
             document.getElementById('main-table-view').classList.add('hidden');
             document.getElementById('mgmt-panel').classList.remove('hidden');
-            // Aquí llamarías a funciones para listar usuarios si existieran en tu API
         }
 
         function closeMgmt() {
@@ -208,16 +255,14 @@
             document.getElementById('main-table-view').classList.remove('hidden');
         }
 
-        function toggleModal(id) { document.getElementById(id).classList.toggle('hidden'); }
-        function logout() { localStorage.removeItem('session'); location.reload(); }
-        function setTheme(t) { t === 'dark' ? document.body.classList.add('dark-mode') : document.body.classList.remove('dark-mode'); localStorage.setItem('theme', t); }
-        function setLang(l) { document.querySelectorAll('.lang').forEach(el => el.innerText = el.getAttribute(`data-${l}`)); localStorage.setItem('lang', l); }
-
         window.onload = () => {
             setTheme(localStorage.getItem('theme') || 'light');
             setLang(localStorage.getItem('lang') || 'es');
             const s = localStorage.getItem('session');
-            if (s) { userAct = JSON.parse(s); initSys(); }
+            if (s) { 
+                userAct = JSON.parse(s); 
+                initSys(); 
+            }
         };
     </script>
 </body>
