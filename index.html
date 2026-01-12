@@ -3,36 +3,38 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sistema de Notas 2026</title>
+    <title>Sistema de Notas 2026 | Oracle Edition</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;800&display=swap" rel="stylesheet">
     <style>
         :root { --bg: #f8fafc; --card: #ffffff; --text: #0f172a; --border: #e2e8f0; --accent: #4f46e5; }
         .dark-mode { --bg: #020617; --card: #0f172a; --text: #f8fafc; --border: #1e293b; --accent: #6366f1; }
+        
         body { font-family: 'Poppins', sans-serif; background-color: var(--bg); color: var(--text); transition: 0.4s; min-height: 100vh; }
         .glass { background: var(--card); border: 1px solid var(--border); backdrop-filter: blur(15px); }
         
-        /* Adaptabilidad de Tabla */
+        /* Adaptabilidad de Tabla para Celulares */
         @media (max-width: 768px) {
             thead { display: none; }
             tr { display: block; margin-bottom: 1rem; padding: 1rem; border: 1px solid var(--border); border-radius: 1.5rem; background: var(--card); }
             td { display: flex; justify-content: space-between; align-items: center; padding: 0.5rem 0 !important; border: none !important; }
-            td::before { content: attr(data-label); font-weight: bold; color: var(--accent); margin-right: 10px; }
+            td::before { content: attr(data-label); font-weight: bold; color: var(--accent); }
+            .content-wrap { padding: 10px; }
         }
 
         .btn-primary { background: var(--accent); color: white; transition: 0.3s; font-weight: 700; border-radius: 12px; }
         .btn-secondary { background: #e2e8f0; color: #475569; border-radius: 12px; font-size: 0.75rem; padding: 8px; }
-        input, select { background: var(--bg) !important; border: 1px solid var(--border) !important; color: var(--text) !important; border-radius: 12px; padding: 10px; width: 100%; outline: none; }
+        .dark-mode .btn-secondary { background: #1e293b; color: #f8fafc; }
         
-        /* Animación de carga */
-        .loading { opacity: 0.5; pointer-events: none; }
+        input, select { background: var(--bg) !important; border: 1px solid var(--border) !important; color: var(--text) !important; border-radius: 12px; padding: 10px; width: 100%; outline: none; }
     </style>
 </head>
 <body class="light">
 
     <nav class="fixed top-4 right-4 z-[110] flex gap-2">
+        <button id="profile-btn" onclick="toggleModal('profile-modal')" class="hidden glass p-3 rounded-full shadow-lg">👤</button>
         <button onclick="toggleModal('custom-menu')" class="glass p-3 rounded-full shadow-lg">⚙️</button>
-        <button id="logout-btn" onclick="logout()" class="hidden bg-red-500 text-white px-6 py-3 rounded-full font-bold shadow-lg lang" data-es="Salir" data-en="Logout">Salir</button>
+        <button id="logout-btn" onclick="logout()" class="hidden bg-red-500 text-white px-6 py-3 rounded-full font-bold shadow-lg lang" data-es="Salir" data-en="Logout"></button>
     </nav>
 
     <div id="custom-menu" class="fixed top-20 right-4 w-48 glass rounded-2xl shadow-2xl p-4 hidden z-[120]">
@@ -48,110 +50,186 @@
 
     <div id="login-sec" class="min-h-screen flex items-center justify-center p-4">
         <div class="glass p-8 rounded-[2.5rem] shadow-2xl w-full max-w-sm text-center">
-            <h1 class="text-2xl font-black text-indigo-600 mb-6 italic lang" data-es="Sistema de Notas" data-en="Notes System">Sistema de Notas</h1>
+            <h1 class="text-2xl font-black text-indigo-600 mb-6 italic lang" data-es="Sistema de Notas" data-en="Notes System"></h1>
             
             <div id="login-form">
-                <input type="text" id="user-in" placeholder="Usuario" class="mb-3 text-center">
-                <input type="password" id="pass-in" placeholder="Contraseña" class="mb-4 text-center">
-                <button onclick="login()" id="btn-login-text" class="w-full btn-primary py-4 text-lg lang" data-es="Entrar" data-en="Sign In">Entrar</button>
+                <input type="text" id="user-in" placeholder="Usuario / Username" class="mb-3 text-center">
+                <input type="password" id="pass-in" placeholder="Contraseña / Password" class="mb-4 text-center">
+                <button onclick="login()" class="w-full btn-primary py-4 text-lg lang" data-es="Entrar" data-en="Sign In"></button>
                 
-                <p id="err" class="text-red-500 mt-4 text-xs font-bold hidden lang" data-es="Error de acceso" data-en="Access Denied">Error de acceso</p>
+                <p id="err" class="text-red-500 mt-4 text-xs font-bold hidden lang" data-es="Error de acceso" data-en="Access Denied"></p>
                 
                 <div id="recovery-options" class="mt-6 flex flex-col gap-2 hidden">
-                    <button onclick="showRecover('user')" class="btn-secondary lang" data-es="Olvidé mi usuario" data-en="Forgot username">Olvidé mi usuario</button>
-                    <button onclick="showRecover('pass')" class="btn-secondary lang" data-es="Olvidé mi contraseña" data-en="Forgot password">Olvidé mi contraseña</button>
+                    <button onclick="showRecover('user')" class="btn-secondary lang" data-es="Olvidé mi usuario" data-en="Forgot username"></button>
+                    <button onclick="showRecover('pass')" class="btn-secondary lang" data-es="Olvidé mi contraseña" data-en="Forgot password"></button>
                 </div>
             </div>
 
             <div id="recover-ui" class="hidden">
                 <h3 id="recover-title" class="font-bold mb-4 text-sm"></h3>
                 <input type="text" id="recover-input" class="mb-4 text-center">
-                <button onclick="processRecovery()" class="w-full btn-primary py-3 mb-2 lang" data-es="Enviar" data-en="Send">Enviar</button>
-                <button onclick="cancelRecover()" class="text-xs opacity-50 font-bold lang" data-es="Volver" data-en="Back">Volver</button>
+                <button onclick="processRecovery()" class="w-full btn-primary py-3 mb-2 lang" data-es="Enviar" data-en="Send"></button>
+                <button onclick="cancelRecover()" class="text-xs opacity-50 font-bold lang" data-es="Volver" data-en="Back"></button>
             </div>
         </div>
     </div>
 
     <div id="sys-sec" class="hidden p-4 md:p-12">
-        <main class="max-w-6xl mx-auto">
+        <div class="max-w-6xl mx-auto mb-6 flex flex-wrap gap-4 items-center justify-between" id="dual-header">
+            <div class="flex gap-2 bg-white/50 dark:bg-black/20 p-2 rounded-full glass">
+                <button onclick="viewGroup('fatima.flores')" class="px-4 py-2 rounded-full text-xs font-bold hover:bg-indigo-600 hover:text-white transition">Fatima F.</button>
+                <button onclick="viewGroup('jorge.flores')" class="px-4 py-2 rounded-full text-xs font-bold hover:bg-indigo-600 hover:text-white transition">Jorge F.</button>
+            </div>
+            <button id="mgmt-btn" onclick="openMgmt()" class="bg-indigo-600 text-white px-6 py-3 rounded-full font-black hidden text-xs lang" data-es="GESTIÓN" data-en="MANAGEMENT"></button>
+        </div>
+
+        <main id="main-table-view" class="max-w-6xl mx-auto">
             <div class="glass rounded-[2rem] shadow-2xl overflow-hidden">
                 <table class="w-full text-left">
                     <thead class="bg-indigo-600 text-white">
                         <tr>
-                            <th class="p-4 lang" data-es="Materia" data-en="Subject">Materia</th>
+                            <th class="p-4 lang" data-es="Materia" data-en="Subject"></th>
                             <th class="p-4">Coti.</th>
                             <th class="p-4">Inte.</th>
                             <th class="p-4">Examen</th>
-                            <th class="p-4 text-right lang" data-es="Final" data-en="Final">Final</th>
+                            <th class="p-4 text-right lang" data-es="Final" data-en="Final"></th>
                         </tr>
                     </thead>
                     <tbody id="table-body" class="divide-y dark:divide-white/5"></tbody>
                 </table>
             </div>
-            <p id="sync-status" class="text-center mt-4 text-xs opacity-50"></p>
         </main>
     </div>
 
     <script>
-        // URL DE TU GOOGLE APPS SCRIPT INTEGRADA
-        const API_URL = "https://script.google.com/macros/s/AKfycbxJLskf_F-HV1kLN5CbvQO50Pzxzs7nagEJCm8JuDhmv0g-Ck9YP8WaHMCFL0lJPbm6/exec"; 
+        // CONFIGURACIÓN DE TU API ORACLE (Middleware)
+        const API_BASE = "https://tu-servidor-oracle-ords.com/ords/schema/v12"; 
         
-        let allData = [];
         let userAct = null;
-        let recoveryMode = '';
+        let recoveryMode = ''; // 'user' o 'pass'
+        const TRANSLATIONS = {
+            recoverUserTitle: { es: "Introduce tu nombre completo", en: "Enter your full name" },
+            recoverPassTitle: { es: "Introduce tu usuario", en: "Enter your username" },
+            recoverySent: { es: "Si el dato existe, recibirás un correo.", en: "If data exists, you will receive an email." }
+        };
 
-        // Cargar datos desde Google Sheets
-        async function loadSheetsData() {
-            try {
-                const resp = await fetch(API_URL);
-                allData = await resp.json();
-            } catch (e) {
-                console.error("Error cargando datos:", e);
+        // --- LÓGICA DE TRADUCCIÓN COMPLETA ---
+        function setLang(l) {
+            document.querySelectorAll('.lang').forEach(el => {
+                const text = el.getAttribute(`data-${l}`);
+                if (text) el.innerText = text;
+            });
+            localStorage.setItem('lang', l);
+            // Actualizar placeholders dinámicamente
+            const uIn = document.getElementById('user-in');
+            const pIn = document.getElementById('pass-in');
+            if(uIn) {
+                uIn.placeholder = l === 'es' ? "Usuario" : "Username";
+                pIn.placeholder = l === 'es' ? "Contraseña" : "Password";
             }
         }
 
-        // Proceso de Login
+        // --- LÓGICA DE LOGIN Y RECUPERACIÓN ---
         async function login() {
-            const btn = document.getElementById('btn-login-text');
-            btn.innerText = "...";
-            btn.classList.add('loading');
-
-            await loadSheetsData();
+            const user = document.getElementById('user-in').value;
+            const pass = document.getElementById('pass-in').value;
             
-            const u = document.getElementById('user-in').value;
-            const p = document.getElementById('pass-in').value;
-            
-            // Buscar usuario en los datos traídos de Sheets
-            const user = allData.find(x => x.usuario == u && x.pass == p);
-
-            if (user) {
-                userAct = user;
-                document.getElementById('login-sec').classList.add('hidden');
-                document.getElementById('sys-sec').classList.remove('hidden');
-                document.getElementById('logout-btn').classList.remove('hidden');
-                renderTable();
-            } else {
+            try {
+                // Aquí llamarías a tu API Oracle
+                // const resp = await fetch(`${API_BASE}/auth`, { method: 'POST', body: JSON.stringify({user, pass}) });
+                // const data = await resp.json();
+                
+                // Simulación para el ejemplo:
+                if(user === "admin" && pass === "2026") {
+                    userAct = { id: user, rol: 'admin', access: 'all' };
+                    successLogin();
+                } else {
+                    throw new Error("Invalid");
+                }
+            } catch (e) {
                 document.getElementById('err').classList.remove('hidden');
                 document.getElementById('recovery-options').classList.remove('hidden');
-                btn.innerText = "Entrar";
-                btn.classList.remove('loading');
             }
         }
 
-        // Dibujar la tabla con los datos del usuario logueado
-        function renderTable() {
-            const body = document.getElementById('table-body');
-            const l = localStorage.getItem('lang') || 'es';
+        function showRecover(mode) {
+            recoveryMode = mode;
+            document.getElementById('login-form').classList.add('hidden');
+            document.getElementById('recover-ui').classList.remove('hidden');
+            const lang = localStorage.getItem('lang') || 'es';
             
-            // Filtramos solo las materias de este usuario
-            const myMats = allData.filter(x => x.usuario === userAct.usuario);
-            
-            body.innerHTML = myMats.map(m => {
-                const n1 = parseFloat(m.coti) || 0;
-                const n2 = parseFloat(m.inte) || 0;
-                const n3 = parseFloat(m.exam) || 0;
-                const final = (n1 + n2 + n3) / 3;
+            if(mode === 'user') {
+                document.getElementById('recover-title').innerText = TRANSLATIONS.recoverUserTitle[lang];
+                document.getElementById('recover-input').placeholder = "Nombre / Name";
+            } else {
+                document.getElementById('recover-title').innerText = TRANSLATIONS.recoverPassTitle[lang];
+                document.getElementById('recover-input').placeholder = "Usuario / Username";
+            }
+        }
 
-                return `
-                <tr class="hover:bg-indigo-50/50 dark:hover:bg-white/5 transition">
-                    <td data-label="${l==='es'?'Materia':'Subject'}" class="p-4 font-bold text-indigo-60
+        async function processRecovery() {
+            const value = document.getElementById('recover-input').value;
+            const lang = localStorage.getItem('lang') || 'es';
+            
+            // Simulación de envío a API Oracle para procesar email
+            console.log(`Solicitando recuperación de ${recoveryMode} para: ${value}`);
+            
+            alert(TRANSLATIONS.recoverySent[lang]);
+            cancelRecover();
+        }
+
+        function cancelRecover() {
+            document.getElementById('login-form').classList.remove('hidden');
+            document.getElementById('recover-ui').classList.add('hidden');
+        }
+
+        function successLogin() {
+            document.getElementById('login-sec').classList.add('hidden');
+            document.getElementById('sys-sec').classList.remove('hidden');
+            document.getElementById('logout-btn').classList.remove('hidden');
+            document.getElementById('profile-btn').classList.remove('hidden');
+            // Cargar datos desde Oracle aquí
+        }
+
+        // --- FUNCIONES DE INTERFAZ ---
+        function toggleModal(id) {
+            document.getElementById(id).classList.toggle('hidden');
+        }
+
+        function setTheme(t) {
+            document.body.className = t === 'dark' ? 'dark-mode' : 'light';
+            localStorage.setItem('theme', t);
+        }
+
+        function logout() {
+            location.reload();
+        }
+
+        window.onload = () => {
+            const t = localStorage.getItem('theme') || 'light';
+            const l = localStorage.getItem('lang') || 'es';
+            setTheme(t);
+            setLang(l);
+            document.getElementById('lang-sel').value = l;
+            document.getElementById('theme-sel').value = t;
+        };
+
+        // Renderizado de tabla (Ejemplo adaptado a móviles)
+        function viewGroup(uKey) {
+            const body = document.getElementById('table-body');
+            const mats = ["Matemáticas", "Física", "Programación"]; // Esto vendría de Oracle
+            const l = localStorage.getItem('lang') || 'es';
+
+            body.innerHTML = mats.map(m => `
+                <tr>
+                    <td data-label="${l === 'es' ? 'Materia' : 'Subject'}" class="p-4 font-bold text-indigo-600">${m}</td>
+                    <td data-label="Coti." class="p-4" contenteditable="true">0</td>
+                    <td data-label="Inte." class="p-4" contenteditable="true">0</td>
+                    <td data-label="Examen" class="p-4" contenteditable="true">0</td>
+                    <td data-label="${l === 'es' ? 'Final' : 'Final'}" class="p-4 text-right font-black text-xl text-indigo-600">0.0</td>
+                </tr>
+            `).join('');
+        }
+    </script>
+</body>
+</html>
